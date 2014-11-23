@@ -6,6 +6,10 @@ public class SomeFrameworkComponent {
 
   }
 
+  protected void onLowMemory() {
+
+  }
+
   protected void onDestroy() {
 
   }

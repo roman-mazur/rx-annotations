@@ -19,8 +19,11 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -43,42 +46,50 @@ public class RxAnnotationProcessor extends AbstractProcessor {
     // A VERY raw draft! Suitable for one example only!
 
     Set<? extends Element> methods = roundEnv.getElementsAnnotatedWith(RxObservable.class);
-    Multimap<TypeElement, ExecutableElement> classMethods = ArrayListMultimap.create();
+    Multimap<TypeMirror, ExecutableElement> classMethods = ArrayListMultimap.create();
+    Map<TypeMirror, String[]> notOverridenMethods = new HashMap<TypeMirror, String[]>();
     for (Element m : methods) {
-      classMethods.put((TypeElement) m.getEnclosingElement(), (ExecutableElement) m);
-    }
-
-    for (TypeElement clazz : classMethods.keySet()) {
-      TypeMirror initialSuperClass = null;
+      TypeElement clazz = (TypeElement) m.getEnclosingElement();
+      SuperClass annotation = clazz.getAnnotation(SuperClass.class);
+      final TypeMirror initialSuperClass;
       try {
-        clazz.getAnnotation(SuperClass.class).value();
+        annotation.value();
         throw new AssertionError("does not work");
       } catch (MirroredTypeException e) {
         initialSuperClass = e.getTypeMirror();
       }
-      String targetClassName = clazz.getQualifiedName().toString();
+      classMethods.put(initialSuperClass, (ExecutableElement) m);
+      if (annotation.methods() != null) {
+        notOverridenMethods.put(initialSuperClass, annotation.methods());
+      }
+    }
+
+    for (TypeMirror superClass : classMethods.keySet()) {
+      String targetClassName = superClass.toString();
       String packageName = targetClassName.substring(0, targetClassName.lastIndexOf("."));
-      String superClass = "Rx_".concat(targetClassName.substring(packageName.length() + 1));
+      String superClassName = "Rx_".concat(targetClassName.substring(packageName.length() + 1));
+      Collection<ExecutableElement> targetMethods = classMethods.get(superClass);
+
       try {
-        JavaFileObject dst = processingEnv.getFiler().createSourceFile(packageName + "." + superClass, clazz);
+        JavaFileObject dst = processingEnv.getFiler().createSourceFile(packageName + "." + superClassName, (TypeElement) targetMethods.iterator().next().getEnclosingElement());
         JavaWriter out = new JavaWriter(dst.openWriter());
 
         out.emitPackage(packageName);
-        out.emitImports(initialSuperClass.toString());
+        out.emitImports(targetClassName);
         out.emitImports(rx.Observable.class, PublishSubject.class);
-        out.beginType(superClass, "class", EnumSet.noneOf(Modifier.class), initialSuperClass.toString());
+        out.beginType(superClassName, "class", EnumSet.noneOf(Modifier.class), targetClassName);
 
-        for (ExecutableElement m : classMethods.get(clazz)) {
+        for (ExecutableElement m : targetMethods) {
           String name = m.getSimpleName().toString();
-          out.emitField("PublishSubject<String>", name.concat("Subject"), EnumSet.of(PRIVATE), "PublishSubject.create()");
-          out.beginMethod("Observable<String>", name.concat("Observable"), EnumSet.of(PROTECTED));
-          out.emitStatement("return " + name + "Subject");
-          out.endMethod();
-          out.emitAnnotation(Override.class);
-          out.beginMethod(m.getReturnType().toString(), name, m.getModifiers());
-          out.emitStatement("super." + name + "()");
-          out.emitStatement(name + "Subject.onNext(" + JavaWriter.stringLiteral(name) + ")");
-          out.endMethod();
+          writeObservableMethod(out, m.getReturnType().toString(), name, m.getModifiers());
+        }
+
+        String[] additionalMethods = notOverridenMethods.get(superClass);
+        if (additionalMethods != null) {
+          for (String name : additionalMethods) {
+            // This might be tricky! :)
+            writeObservableMethod(out, "void", name, EnumSet.of(PROTECTED));
+          }
         }
 
         out.endType();
@@ -92,6 +103,16 @@ public class RxAnnotationProcessor extends AbstractProcessor {
     return false;
   }
 
-
+  private void writeObservableMethod(JavaWriter out, String returnType, String name, Set<Modifier> modifiers) throws IOException {
+    out.emitField("PublishSubject<String>", name.concat("Subject"), EnumSet.of(PRIVATE), "PublishSubject.create()");
+    out.beginMethod("Observable<String>", name.concat("Observable"), EnumSet.of(PROTECTED));
+    out.emitStatement("return " + name + "Subject");
+    out.endMethod();
+    out.emitAnnotation(Override.class);
+    out.beginMethod(returnType, name, modifiers);
+    out.emitStatement("super." + name + "()");
+    out.emitStatement(name + "Subject.onNext(" + JavaWriter.stringLiteral(name) + ")");
+    out.endMethod();
+  }
 
 }

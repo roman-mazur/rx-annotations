@@ -12,4 +12,6 @@ public @interface SuperClass {
 
   Class<?> value();
 
+  String[] methods();
+
 }
