@@ -3,7 +3,7 @@ package rx.annotations.internal;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.squareup.javawriter.JavaWriter;
-import rx.annotations.RxObervable;
+import rx.annotations.RxObservable;
 import rx.annotations.SuperClass;
 import rx.subjects.PublishSubject;
 
@@ -35,14 +35,14 @@ public class RxAnnotationProcessor extends AbstractProcessor {
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
-    return new HashSet<String>(Arrays.asList(RxObervable.class.getName(), SuperClass.class.getName()));
+    return new HashSet<String>(Arrays.asList(RxObservable.class.getName(), SuperClass.class.getName()));
   }
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     // A VERY raw draft! Suitable for one example only!
 
-    Set<? extends Element> methods = roundEnv.getElementsAnnotatedWith(RxObervable.class);
+    Set<? extends Element> methods = roundEnv.getElementsAnnotatedWith(RxObservable.class);
     Multimap<TypeElement, ExecutableElement> classMethods = ArrayListMultimap.create();
     for (Element m : methods) {
       classMethods.put((TypeElement) m.getEnclosingElement(), (ExecutableElement) m);

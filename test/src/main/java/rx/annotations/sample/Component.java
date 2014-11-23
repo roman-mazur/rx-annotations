@@ -1,7 +1,7 @@
 package rx.annotations.sample;
 
 import rx.Observable;
-import rx.annotations.RxObervable;
+import rx.annotations.RxObservable;
 import rx.annotations.SuperClass;
 
 @SuperClass(SomeFrameworkComponent.class)
@@ -12,7 +12,7 @@ public class Component extends Rx_Component {
     Observable.never().takeUntil(onDestroyObservable());
   }
 
-  @RxObervable
+  @RxObservable
   @Override
   protected void onDestroy() {
     super.onDestroy();

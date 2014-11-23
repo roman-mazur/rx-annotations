@@ -8,5 +8,5 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 @Retention(SOURCE)
 @Target(METHOD)
-public @interface RxObervable {
+public @interface RxObservable {
 }
