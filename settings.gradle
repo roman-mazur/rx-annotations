@@ -1,0 +1,5 @@
+rootProject.name = 'rx-annotations'
+
+include ':compiler'
+include ':annotations'
+include ':test'

@@ -1,0 +1,26 @@
+.DS_Store
+
+# Local properties
+dev.properties
+local.properties
+
+# Generated
+gen
+bin
+tmp
+
+# Eclipse
+.project
+.classpath
+.settings
+.checkstyle
+
+# IDEA
+out
+.idea
+*.iml
+
+# Gradle
+build
+.gradle
+
